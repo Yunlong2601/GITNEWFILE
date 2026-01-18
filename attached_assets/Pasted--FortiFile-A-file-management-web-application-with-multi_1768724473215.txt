@@ -1,0 +1,161 @@
+# FortiFile
+
+A file management web application with multi-level security.
+
+## Overview
+FortiFile is a React application for secure file management with features including:
+- File upload via drag & drop
+- File organization (My Drive, Recent, Starred, Trash)
+- Storage tracking
+- Grid/list view toggle
+- Search functionality
+- **File Security Levels**: Standard, High, and Maximum security options
+- **End-to-End Encryption**: Maximum security files are encrypted client-side
+- **Secure Chat**: Integrated chat sidebar with room-based messaging and 2FA protection
+
+## Security Feature Architecture
+The security system supports three levels:
+1. **Standard**: Basic file storage
+2. **High**: Enhanced security indication
+3. **Maximum**: End-to-end encryption with email-based decryption codes
+
+### Data Loss Prevention (DLP)
+Before any file upload, FortiFile scans text-based files for sensitive information:
+- **Email addresses**
+- **Phone numbers**
+- **Credit card numbers** (with Luhn validation)
+- **Physical addresses**
+- **Passwords** (pattern matching)
+- **Personal names** (Mr./Mrs./Dr. prefixes)
+
+**Flow:**
+1. User selects file(s) for upload
+2. DLP scanner analyzes text content
+3. If sensitive data found, warning dialog appears showing findings
+4. User can cancel or proceed with upload
+5. Non-text files (images, PDFs, etc.) skip scanning and proceed
+
+**Implementation:** `src/lib/dlpPatterns.ts` - regex patterns and scanning logic
+
+### DLP Admin Logging
+Admins can monitor all sensitive file upload attempts:
+- **Endpoint**: `GET /api/dlp/logs` (admin-only)
+- **Logged data**: timestamp, username, file name, file size, sensitive data types, action (uploaded/cancelled)
+- **Admin Dashboard**: Shows logs table with refresh capability
+- **In-memory storage**: Keeps last 100 entries (prototype)
+
+### Maximum Security Flow
+1. **Upload**: When uploading with Maximum security, the file is encrypted using AES-GCM encryption
+2. **Email**: The 6-digit decryption code is sent to the specified recipient email
+3. **Download**: User downloads an `.encrypted` file
+4. **Decrypt**: User navigates to `/decrypt` page, uploads the encrypted file, enters the code, and downloads the decrypted file
+
+### Encryption Implementation
+- Uses Web Crypto API with AES-GCM algorithm
+- Key derivation uses PBKDF2 with 100,000 iterations
+- Encrypted package includes: metadata, salt, IV, and encrypted content
+- Located in `src/lib/crypto.ts`
+
+### Email Integration
+Email sending for decryption codes uses Gmail SMTP with nodemailer.
+
+**Configuration:**
+- `GMAIL_USER`: The Gmail address used for sending
+- `GMAIL_APP_PASSWORD`: Gmail app password for authentication
+- Backend server runs on port 3001
+- API endpoint: `POST /api/send-decryption-code`
+
+**Architecture:**
+- Express server (`server/index.ts`) handles email sending
+- Vite proxies `/api` requests to the backend in development
+- The workflow runs both servers: `npx tsx server/index.ts & npm run dev`
+
+## Tech Stack
+- React 18 with TypeScript
+- Vite for development and build
+- Tailwind CSS for styling
+- Shadcn/UI components
+- React Router for navigation
+- TanStack Query for data fetching
+- Lucide React for icons
+- Web Crypto API for encryption
+
+## Secure Chat Feature
+The chat sidebar provides secure messaging integrated into the main interface:
+- **Room-based messaging**: Create and join chat rooms
+- **2FA protection**: Rooms can require verification codes
+- **localStorage persistence**: Messages and rooms persist locally
+- **Simple user identification**: Enter a display name to start chatting
+
+### Data Structures (shared/schema.ts)
+- `chatRooms`: Room definitions with 2FA flag
+- `chatMessages`: Messages linked to rooms and users
+- `chat2FACodes`: Verification codes for secure rooms
+
+## Project Structure
+```
+src/
+├── components/
+│   ├── chat/        # Chat components (ChatSidebar)
+│   ├── files/       # File-related components (FileCard, FileGrid, UploadZone)
+│   ├── layout/      # Layout components (Header, Sidebar)
+│   └── ui/          # Shadcn UI components
+├── hooks/           # Custom React hooks
+├── lib/             # Utility functions (including crypto.ts, queryClient.ts)
+├── pages/           # Page components (Index, Decrypt, Chat)
+├── App.tsx          # Main application component
+├── main.tsx         # Entry point
+└── index.css        # Global styles
+
+server/
+└── index.ts         # Express backend for email sending
+
+shared/
+└── schema.ts        # Database schema (Drizzle ORM)
+```
+
+## Migration to Flask Framework
+To convert this project from React/Node.js to a Python Flask framework while ensuring core functionality, follow these steps:
+
+### Core Changes Required
+1.  **Backend Structure**:
+    - Replace Express (`server/index.ts`) with a Flask application (`app.py`).
+    - Use `Flask-SQLAlchemy` or `peewee` for database ORM (mapping to the existing PostgreSQL schema).
+    - Use `Flask-Session` for session management to replace `express-session`.
+2.  **Frontend Structure**:
+    - Convert React components into Jinja2 templates (`templates/` folder).
+    - Move static assets (CSS, JS, images) to a `static/` folder.
+    - Use Tailwind CSS via CDN or a simple build step in the Flask environment.
+3.  **Security Integration**:
+    - Re-implement client-side encryption using the same Web Crypto API logic in a vanilla JS file or within templates.
+    - Port the DLP scanning logic (`src/lib/dlpPatterns.ts`) to a Python module for server-side validation or keep it in JS for client-side UX.
+    - Use `Flask-Mail` for sending decryption codes via SMTP.
+4.  **Dependencies**:
+    - Replace `package.json` dependencies with a `requirements.txt` (flask, flask-sqlalchemy, flask-mail, psycopg2-binary, etc.).
+
+### Replit Prompt to Build from Scratch
+To recreate this project as a Flask application on Replit, use the following prompt:
+
+> "Build a secure file management application called FortiFile using Python Flask and PostgreSQL.
+>
+> **Core Features**:
+> 1. **Authentication**: Simple login/logout with 'user' and 'admin' roles.
+> 2. **File Management**: Dashboard for uploading and listing files.
+> 3. **Security Levels**: Three levels (Standard, High, Maximum). Maximum security must use client-side AES-GCM encryption with a 6-digit code sent via email (Gmail SMTP).
+> 4. **DLP Scanning**: Scan text files for sensitive data (emails, credit cards, etc.) before upload and show a warning.
+> 5. **Admin Dashboard**: An audit log showing logins, file activities, and DLP event history.
+>
+> **Tech Stack**: Flask, Jinja2 templates, Tailwind CSS, SQLAlchemy (PostgreSQL), and Web Crypto API for encryption."
+
+## Pages
+- `/` - Main file management interface
+- `/decrypt` - Decrypt encrypted files
+
+## Development
+- Run: Workflow starts both frontend and backend
+- Build: `npm run build`
+- Preview: `npm run preview`
+
+## Deployment
+Configured for static deployment. Build output goes to `dist/` directory.
+Note: For production, the email backend would need separate deployment.

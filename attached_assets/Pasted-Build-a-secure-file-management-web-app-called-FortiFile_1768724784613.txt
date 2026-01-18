@@ -1,0 +1,76 @@
+Build a secure file management web app called “FortiFile” using Python Flask + PostgreSQL, migrating from a React/Node concept.
+
+MUST MATCH THESE FEATURES (from spec):
+- Drag & drop file upload
+- File organization: My Drive, Recent, Starred, Trash (must be functional, not just UI)
+- Storage tracking (show used storage total for the user)
+- Grid/list view toggle for file display
+- Search functionality (search by filename)
+- File Security Levels: Standard, High, Maximum
+- Maximum Security: end-to-end encryption client-side (Web Crypto API AES-GCM) with PBKDF2 key derivation (100,000 iterations)
+- Email sending of 6-digit decryption code via Gmail SMTP (Flask-Mail)
+- Decryption page: /decrypt uploads .encrypted file + code, decrypt client-side and download decrypted file
+- Secure Chat sidebar: room-based messaging, optional 2FA-protected rooms, localStorage persistence, simple display-name identity
+
+TECH STACK
+- Backend: Flask
+- Database: PostgreSQL using SQLAlchemy
+- Sessions/Auth: Flask-Login (user/admin roles)
+- Templates: Jinja2 in templates/
+- Static: static/ for JS/CSS; Tailwind CSS via CDN
+- Encryption logic in static/crypto.js using Web Crypto API
+
+DLP (Data Loss Prevention) – MUST IMPLEMENT:
+Before any upload, scan text-based files (.txt, .csv, .json) for:
+- email addresses
+- phone numbers
+- credit card numbers (Luhn validation required)
+- physical addresses (simple regex)
+- passwords (pattern matching: password:/pass=/pwd=)
+- personal names with titles (Mr./Mrs./Ms./Dr.)
+Flow:
+1) user selects file(s)
+2) DLP scanner analyzes text content
+3) if sensitive data found, show warning dialog listing detected data types
+4) user can cancel or proceed
+5) non-text files (images, PDFs, etc.) skip scanning and proceed
+
+DLP Admin Logging (prototype behavior):
+- Admin can view all sensitive upload attempts
+- Endpoint: GET /api/dlp/logs (admin-only)
+- Logged fields: timestamp, username, file name, file size, sensitive data types, action (uploaded/cancelled)
+- Keep only the last 100 entries (prototype). Implement as in-memory ring buffer OR DB with limit 100 (but behavior must match “last 100 only”).
+- Admin dashboard page with refresh button
+
+MAXIMUM SECURITY FLOW:
+1) On upload with Maximum: encrypt client-side with AES-GCM
+2) Send 6-digit code to recipient email using POST /api/send-decryption-code (Gmail SMTP)
+3) Store/upload only the encrypted package as a .encrypted file (JSON with metadata, salt, IV, encrypted content)
+4) /decrypt page decrypts client-side and downloads original
+
+SECURE CHAT SIDEBAR (must exist on main interface):
+- Create/join chat rooms
+- Rooms can require a 2FA verification code
+- Messages and rooms stored in localStorage
+- User enters a display name to use chat
+- Keep it simple but functional
+
+PAGES
+- / : main file manager UI with sidebar (My Drive / Recent / Starred / Trash), upload, search, grid/list toggle, storage usage
+- /decrypt : decrypt .encrypted files
+- /login : login page
+
+REQUIRED API ROUTES
+- POST /api/send-decryption-code  (recipient_email, code or backend-generated code)
+- GET /api/dlp/logs (admin-only)
+- POST /api/dlp/log (record a DLP event when warning triggers and user chooses cancel/proceed)
+
+PROJECT STRUCTURE
+app.py, models.py, routes/, templates/, static/, uploads/
+
+DELIVERABLE
+Generate all code files needed. The app must run on Replit with one Run button.
+Seed accounts:
+- admin / admin123 (role=admin)
+- user / user123 (role=user)
+Use clean minimal Tailwind styling.
