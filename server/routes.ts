@@ -11,6 +11,7 @@ import { promisify } from "util";
 import nodemailer from "nodemailer";
 import { registerObjectStorageRoutes } from "./replit_integrations/object_storage";
 import { InsertFile, InsertDlpLog, InsertChatMessage, InsertChatRoom } from "@shared/schema";
+import { db } from "./db";
 
 const scryptAsync = promisify(scrypt);
 
@@ -198,7 +199,7 @@ export async function registerRoutes(
 
   app.get(api.files.get.path, isAuthenticated, async (req, res) => {
     try {
-      const id = parseInt(req.params.id);
+      const id = parseInt(req.params.id as string);
       const file = await storage.getFile(id);
       
       if (!file || (file.userId !== (req.user as any).id && (req.user as any).role !== 'admin')) {
@@ -213,7 +214,7 @@ export async function registerRoutes(
 
   app.patch(api.files.update.path, isAuthenticated, async (req, res) => {
     try {
-      const id = parseInt(req.params.id);
+      const id = parseInt(req.params.id as string);
       const input = api.files.update.input.parse(req.body);
       const userId = (req.user as any).id;
 
@@ -236,7 +237,7 @@ export async function registerRoutes(
 
   app.delete(api.files.delete.path, isAuthenticated, async (req, res) => {
     try {
-      const id = parseInt(req.params.id);
+      const id = parseInt(req.params.id as string);
       const userId = (req.user as any).id;
       
       // If soft delete logic is needed, update 'isTrash' to true instead.
@@ -399,7 +400,7 @@ export async function registerRoutes(
 
   app.get(api.chat.messages.list.path, isAuthenticated, async (req, res) => {
     try {
-      const roomId = parseInt(req.params.roomId);
+      const roomId = parseInt(req.params.roomId as string);
       const messages = await storage.getChatMessages(roomId);
       res.json(messages);
     } catch (err) {
@@ -409,7 +410,7 @@ export async function registerRoutes(
 
   app.post(api.chat.messages.create.path, isAuthenticated, async (req, res) => {
     try {
-      const roomId = parseInt(req.params.roomId);
+      const roomId = parseInt(req.params.roomId as string);
       const input = api.chat.messages.create.input.parse(req.body);
       
       const messageData: InsertChatMessage = {
@@ -437,7 +438,6 @@ export async function registerRoutes(
 }
 
 async function seedDatabase() {
-  const existingUsers = await db.select().from(storage.getUserByUsername('admin') ? [] : []); // Simple check logic
   const admin = await storage.getUserByUsername('admin');
   
   if (!admin) {

@@ -13,7 +13,7 @@ export function useFiles(view?: 'all' | 'recent' | 'starred' | 'trash', search?:
       const res = await fetch(url);
       if (!res.ok) throw new Error("Failed to fetch files");
       
-      return api.files.list.responses[200].parse(await res.json());
+      return await res.json();
     },
   });
 }
@@ -24,7 +24,7 @@ export function useStorageStats() {
     queryFn: async () => {
       const res = await fetch(api.files.stats.path);
       if (!res.ok) throw new Error("Failed to fetch stats");
-      return api.files.stats.responses[200].parse(await res.json());
+      return await res.json();
     },
   });
 }
@@ -39,7 +39,7 @@ export function useCreateFile() {
         body: JSON.stringify(data),
       });
       if (!res.ok) throw new Error("Failed to create file record");
-      return api.files.create.responses[201].parse(await res.json());
+      return await res.json();
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: [api.files.list.path] });
@@ -59,7 +59,7 @@ export function useUpdateFile() {
         body: JSON.stringify(updates),
       });
       if (!res.ok) throw new Error("Failed to update file");
-      return api.files.update.responses[200].parse(await res.json());
+      return await res.json();
     },
     onSuccess: () => queryClient.invalidateQueries({ queryKey: [api.files.list.path] }),
   });
